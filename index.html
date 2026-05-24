@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Genshin Wish Simulator | Character Emoji Avatars</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0a111a;
+            font-family: 'Segoe UI', 'Poppins', system-ui, 'Inter', sans-serif;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        /* 左右背景角色图（稳定显示） */
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 180px;
+            height: 400px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before {
+            left: 10px;
+            background-image: url('https://rerollcdn.com/GENSHIN/Character/Klee.png');
+        }
+        body::after {
+            right: 10px;
+            background-image: url('https://rerollcdn.com/GENSHIN/Character/Paimon.png');
+        }
+        @media (max-width: 700px) {
+            body::before, body::after { width: 100px; opacity: 0.15; }
+        }
+
+        .sim-card {
+            max-width: 750px;
+            width: 100%;
+            background: rgba(16, 28, 36, 0.9);
+            backdrop-filter: blur(16px);
+            border-radius: 56px;
+            border: 1px solid rgba(255, 215, 140, 0.45);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+
+        .banner {
+            background: radial-gradient(ellipse at 30% 45%, #2a5f7a, #0e212f);
+            padding: 28px 20px 20px;
+            text-align: center;
+            border-bottom: 2px solid #f7c56e;
+        }
+        .banner h1 {
+            margin: 0;
+            font-size: 1.9rem;
+            background: linear-gradient(135deg, #FFE6B0, #E5B83C);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .featured {
+            background: #0f1c24cc;
+            margin: 18px 20px 0;
+            border-radius: 60px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            border: 1px solid #ffdf99;
+        }
+        .featured-img {
+            width: 70px;
+            height: 70px;
+            border-radius: 70px;
+            background: #2a4b62;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            box-shadow: 0 0 0 3px #ffda88;
+        }
+        .featured-name {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #ffefc0;
+        }
+        .resources {
+            display: flex;
+            justify-content: space-between;
+            background: #071217cc;
+            margin: 20px;
+            padding: 12px 20px;
+            border-radius: 60px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .reso-item {
+            background: #1f313e;
+            padding: 6px 20px;
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f7e5b5;
+        }
+        .wish-zone {
+            padding: 6px 20px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .wish-btn {
+            background: linear-gradient(145deg, #304a5c, #1c2e3b);
+            border: none;
+            padding: 14px 36px;
+            font-size: 1.35rem;
+            font-weight: bold;
+            border-radius: 60px;
+            color: #f7e5b0;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #0a121b;
+            transition: 0.08s linear;
+        }
+        .wish-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 3px 0 #0a121b;
+        }
+        .result-area {
+            background: #030d13aa;
+            margin: 15px 20px 22px;
+            border-radius: 48px;
+            padding: 16px;
+            min-height: 280px;
+            backdrop-filter: blur(8px);
+            border: 1px solid #ffdb8a77;
+        }
+        .result-title {
+            font-size: 0.85rem;
+            color: #c3d9ec;
+            padding-left: 10px;
+            margin-bottom: 12px;
+        }
+        .result-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .wish-card {
+            background: linear-gradient(145deg, #192f3f, #0d202c);
+            width: 105px;
+            text-align: center;
+            border-radius: 28px;
+            padding: 8px 4px 8px;
+            border: 1px solid #b9d3e644;
+            position: relative;
+        }
+        .wish-card.character-card {
+            background: linear-gradient(145deg, #2a4a5a, #14303e);
+            border: 2px solid #ffc857;
+            box-shadow: 0 0 12px rgba(255,200,50,0.5);
+        }
+        .character-badge {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            background: #ffd966ee;
+            color: #2c1a0a;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 0px 6px;
+            border-radius: 20px;
+        }
+        .star5 { border: 2px solid #ffb347; box-shadow: 0 0 12px #f0a020; background: linear-gradient(145deg, #382d14, #201d0a); }
+        .star4 { border: 2px solid #b976dc; box-shadow: 0 0 8px #c77eff; }
+        .card-avatar {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background: #1e333f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.6rem;
+        }
+        .card-name {
+            font-size: 0.7rem;
+            color: #f4ebd0;
+            font-weight: 600;
+            margin-top: 8px;
+            white-space: nowrap;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-element {
+            font-size: 0.6rem;
+            margin-top: 3px;
+            color: #cee2f5;
+        }
+        .empty-log {
+            color: #91a9c0;
+            text-align: center;
+            padding: 32px;
+            font-style: italic;
+        }
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 20px 28px;
+            gap: 15px;
+        }
+        .action-btn {
+            background: #1f313e;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 40px;
+            color: #f3e2be;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            flex: 1;
+        }
+        hr { margin: 0 20px; border-color: #6d8eaa44; }
+        .toast-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000000cc;
+            backdrop-filter: blur(8px);
+            color: #ffecb3;
+            padding: 8px 24px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            z-index: 999;
+            pointer-events: none;
+            transition: 0.2s;
+        }
+    </style>
+</head>
+<body>
+<div class="sim-card">
+    <div class="banner">
+        <h1>🌊 WANDERLUST INVOCATION</h1>
+        <p>⭐ "May the stars guide your wishes" ⭐</p>
+    </div>
+    <div class="featured">
+        <div class="featured-img">💧</div>
+        <div class="featured-info">
+            <div class="featured-name">Furina · Dea Aeonia</div>
+            <div class="featured-tag">⭐️⭐️⭐️⭐️⭐️ · Hydro · Sword</div>
+        </div>
+    </div>
+    <div class="resources">
+        <div class="reso-item"><span>🌟</span> Intertwined Fate: <strong id="fateCount">0</strong></div>
+        <div class="reso-item"><span>💎</span> Primogems: <strong id="primogemCount">0</strong></div>
+    </div>
+    <div class="wish-zone">
+        <button class="wish-btn" id="wish1Btn">🎲 Wish x1</button>
+        <button class="wish-btn" id="wish10Btn">✨ Wish x10</button>
+    </div>
+    <div class="result-area">
+        <div class="result-title">📜 WISH LOG · RADIANT MOMENTS</div>
+        <div id="resultContainer" class="result-grid">
+            <div class="empty-log">✨ Tap "Wish" to begin your journey ✨</div>
+        </div>
+    </div>
+    <hr />
+    <div class="action-bar">
+        <button class="action-btn" id="shopBtn">🛒 TOP-UP / RESTORE</button>
+        <button class="action-btn" id="resetBtn">♻️ RESET ACCOUNT</button>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg" style="opacity:0;">✨</div>
+
+<script>
+    // ========== 角色头像使用独特 Emoji（永不加载失败）==========
+    const characterAvatar = {
+        "Furina": "💧👑",
+        "Diluc": "🔥🦅",
+        "Keqing": "⚡🌺",
+        "Mona": "💧🔮",
+        "Jean": "🌪️⚔️",
+        "Qiqi": "❄️🌸",
+        "Tighnari": "🍃🏹",
+        "Dehya": "🔥🐅",
+        "Bennett": "🔥🎒",
+        "Xingqiu": "💧📜",
+        "Sucrose": "🍃⚗️",
+        "Fischl": "⚡🐦‍⬛",
+        "Noelle": "🛡️🍷",
+        "Rosaria": "❄️🌙",
+        "Kuki Shinobu": "⚡🎭",
+        "Layla": "❄️✨",
+        "Yaoyao": "🐇🥬",
+        "Kaveh": "🏗️🎨"
+    };
+
+    // 武器图标映射
+    const weaponIcon = {
+        "Sword": "⚔️",
+        "Claymore": "🗡️",
+        "Bow": "🏹",
+        "Catalyst": "📖",
+        "Polearm": "🔱"
+    };
+    function getWeaponIcon(type) { return weaponIcon[type] || "⚔️"; }
+
+    // 五星角色列表
+    const fiveStarList = ["Furina","Diluc","Keqing","Mona","Jean","Qiqi","Tighnari","Dehya"];
+    // 四星角色列表
+    const fourStarList = ["Bennett","Xingqiu","Sucrose","Fischl","Noelle","Rosaria","Kuki Shinobu","Layla","Yaoyao","Kaveh"];
+    // 四星武器
+    const fourWeapons = [
+        { name: "Sacrificial Sword", type: "Sword" },
+        { name: "The Widsith", type: "Catalyst" },
+        { name: "Favonius Lance", type: "Polearm" },
+        { name: "Rust", type: "Bow" },
+        { name: "Lion's Roar", type: "Sword" }
+    ];
+    // 三星武器
+    const threeWeapons = [
+        { name: "Skyrider Sword", type: "Sword" },
+        { name: "Slingshot", type: "Bow" },
+        { name: "Emerald Orb", type: "Catalyst" },
+        { name: "Bloodtainted Greatsword", type: "Claymore" }
+    ];
+
+    // 构建四星池（角色权重2，武器权重1）
+    let fourPool = [];
+    for (let name of fourStarList) {
+        fourPool.push({ kind: "char", name });
+        fourPool.push({ kind: "char", name });
+    }
+    for (let w of fourWeapons) {
+        fourPool.push({ kind: "weapon", name: w.name, type: w.type });
+    }
+
+    // 状态
+    let primogems = 16000;
+    let fates = 0;
+    let pity5 = 0;
+    let pity4 = 0;
+    let guaranteeLimited = false;
+    let history = [];
+
+    const fateSpan = document.getElementById('fateCount');
+    const primoSpan = document.getElementById('primogemCount');
+    const resultDiv = document.getElementById('resultContainer');
+    const toast = document.getElementById('toastMsg');
+
+    function showMsg(msg, good=true) {
+        toast.innerText = msg;
+        toast.style.opacity = '1';
+        toast.style.background = good ? '#2c5a2ccc' : '#8b3c2ecc';
+        setTimeout(() => toast.style.opacity = '0', 1800);
+    }
+
+    function updateUI() {
+        fateSpan.innerText = fates;
+        primoSpan.innerText = primogems;
+    }
+
+    function getElement(name) {
+        const map = {
+            "Furina":"Hydro","Diluc":"Pyro","Keqing":"Electro","Mona":"Hydro",
+            "Jean":"Anemo","Qiqi":"Cryo","Tighnari":"Dendro","Dehya":"Pyro",
+            "Bennett":"Pyro","Xingqiu":"Hydro","Sucrose":"Anemo","Fischl":"Electro",
+            "Noelle":"Geo","Rosaria":"Cryo","Kuki Shinobu":"Electro","Layla":"Cryo",
+            "Yaoyao":"Dendro","Kaveh":"Dendro"
+        };
+        return map[name] || "";
+    }
+
+    function renderHistory() {
+        if (!history.length) {
+            resultDiv.innerHTML = '<div class="empty-log">✨ Tap "Wish" to begin your journey ✨</div>';
+            return;
+        }
+        resultDiv.innerHTML = '';
+        [...history].reverse().forEach(item => {
+            const card = document.createElement('div');
+            let starClass = item.star===5 ? 'star5' : (item.star===4 ? 'star4' : '');
+            const isChar = item.isCharacter === true;
+            card.className = `wish-card ${starClass} ${isChar ? 'character-card' : ''}`;
+            let badge = isChar ? '<div class="character-badge">👤 角色</div>' : '';
+            let avatarHtml = '';
+            if (isChar && characterAvatar[item.name]) {
+                avatarHtml = `<div class="card-avatar">${characterAvatar[item.name]}</div>`;
+            } else if (item.star===5 && characterAvatar[item.name]) {
+                avatarHtml = `<div class="card-avatar">${characterAvatar[item.name]}</div>`;
+            } else {
+                // 武器
+                let icon = item.weaponType ? getWeaponIcon(item.weaponType) : "⚔️";
+                avatarHtml = `<div class="card-avatar" style="font-size:2.5rem;">${icon}</div>`;
+            }
+            let eleText = "";
+            if (item.star===5) eleText = `★5 ${item.element || ''}`;
+            else if (item.star===4) eleText = `★4 ${item.element || (item.weaponType ? item.weaponType : '')}`;
+            else eleText = "★3";
+            card.innerHTML = `
+                ${badge}
+                ${avatarHtml}
+                <div class="card-name">${item.name}</div>
+                <div class="card-element">${eleText}</div>
+            `;
+            resultDiv.appendChild(card);
+        });
+        if (resultDiv.scrollHeight > resultDiv.clientHeight)
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+
+    function singleWish(skipDeduction=false) {
+        if (!skipDeduction) {
+            if (fates<=0 && primogems<160) {
+                showMsg("💔 Insufficient Primogems / Fates! Tap TOP-UP.", false);
+                return null;
+            }
+            if (fates>0) fates--;
+            else primogems -= 160;
+        }
+        pity5++;
+        pity4++;
+        let isFive=false, isFour=false;
+        let rate = 0.006;
+        if (pity5 >= 74) {
+            let extra = (pity5-74+1)*0.06;
+            rate = Math.min(1, 0.006+extra);
+            if (pity5>=90) rate=1;
+        }
+        if (Math.random()<rate || pity5>=90) isFive=true;
+        if (!isFive) {
+            if (pity4>=10) isFour=true;
+            else if (Math.random()<0.058) isFour=true;
+        }
+        let result = null;
+        if (isFive) {
+            let candidates = guaranteeLimited ? fiveStarList.filter(c=>c==="Furina") : fiveStarList;
+            if (candidates.length===0) candidates = fiveStarList;
+            let name = candidates[Math.floor(Math.random()*candidates.length)];
+            result = { name, star:5, isCharacter:true, element: getElement(name) };
+            if (name==="Furina") guaranteeLimited=false;
+            else guaranteeLimited=true;
+            pity5=0; pity4=0;
+            showMsg(`✨ ★5 ${name} arrived! ✨`, true);
+        } else if (isFour) {
+            let pick = fourPool[Math.floor(Math.random()*fourPool.length)];
+            if (pick.kind === "char") {
+                result = { name: pick.name, star:4, isCharacter:true, element: getElement(pick.name) };
+                showMsg(`⭐ ★4 Character: ${pick.name}`, true);
+            } else {
+                result = { name: pick.name, star:4, isCharacter:false, weaponType: pick.type, element: pick.type };
+            }
+            pity4=0;
+        } else {
+            let w = threeWeapons[Math.floor(Math.random()*threeWeapons.length)];
+            result = { name: w.name, star:3, isCharacter:false, weaponType: w.type, element: w.type };
+        }
+        if (result) history.unshift(result);
+        if (!skipDeduction) {
+            updateUI();
+            renderHistory();
+        }
+        return result;
+    }
+
+    function tenWish() {
+        let total = fates*160 + primogems;
+        if (total < 1600) {
+            showMsg("❌ Not enough for 10 wishes! Top-up.", false);
+            return false;
+        }
+        for (let i=0;i<10;i++) {
+            if (fates>0) fates--;
+            else if (primogems>=160) primogems-=160;
+            else break;
+            singleWish(true);
+        }
+        updateUI();
+        renderHistory();
+        return true;
+    }
+
+    function replenish() {
+        primogems += 16000;
+        fates += 10;
+        updateUI();
+        showMsg("🎁 Top-up: 16,000 Primogems + 10 Fates!", true);
+    }
+
+    function fullReset() {
+        if (confirm("⚠️ RESET all data? Wish history and pity will be cleared.")) {
+            primogems = 16000;
+            fates = 0;
+            pity5=0; pity4=0;
+            guaranteeLimited=false;
+            history=[];
+            updateUI();
+            renderHistory();
+            showMsg("✨ World reset. New journey!", true);
+        }
+    }
+
+    document.getElementById('wish1Btn').onclick = () => singleWish(false);
+    document.getElementById('wish10Btn').onclick = () => tenWish();
+    document.getElementById('shopBtn').onclick = () => replenish();
+    document.getElementById('resetBtn').onclick = () => fullReset();
+
+    updateUI();
+    renderHistory();
+</script>
+</body>
+</html>
